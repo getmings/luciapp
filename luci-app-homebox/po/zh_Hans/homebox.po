@@ -1,0 +1,50 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+
+msgid "HomeBox"
+msgstr "HomeBox"
+
+msgid "家庭局域网测速工具。"
+msgstr "家庭局域网测速工具。"
+
+msgid "HomeBox 服务"
+msgstr "HomeBox 服务"
+
+msgid "状态"
+msgstr "状态"
+
+msgid "运行中"
+msgstr "运行中"
+
+msgid "已停止"
+msgstr "已停止"
+
+msgid "homebox 二进制"
+msgstr "homebox 二进制"
+
+msgid "已安装"
+msgstr "已安装"
+
+msgid "未安装"
+msgstr "未安装"
+
+msgid "版本"
+msgstr "版本"
+
+msgid "未知"
+msgstr "未知"
+
+msgid "服务控制 (点击开启/关闭)"
+msgstr "服务控制 (点击开启/关闭)"
+
+msgid "端口"
+msgstr "端口"
+
+msgid "HomeBox 网页"
+msgstr "HomeBox 网页"
+
+msgid "打开 HomeBox 网页"
+msgstr "打开 HomeBox 网页"

@@ -1,0 +1,29 @@
+#!/bin/sh
+# rpcd exec plugin: ubus object "luci.homebox"
+BIN=/usr/bin/homebox
+
+case "$1" in
+list)
+	echo '{ "status": {} }'
+	;;
+call)
+	case "$2" in
+	status)
+		installed=false
+		running=false
+		version=""
+
+		if [ -x "$BIN" ]; then
+			installed=true
+			# 输出形如 "homebox 0.1.3"，取第二列；兼容输出在 stderr 的情况
+			version="$("$BIN" -V 2>&1 | awk 'NR==1 { print $NF }' | tr -cd '0-9A-Za-z._+-')"
+		fi
+
+		pidof homebox >/dev/null 2>&1 && running=true
+
+		printf '{ "installed": %s, "running": %s, "version": "%s" }\n' \
+			"$installed" "$running" "$version"
+		;;
+	esac
+	;;
+esac
