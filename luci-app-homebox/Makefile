@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-homebox
-PKG_VERSION:=1.3
+PKG_VERSION:=1.4
 PKG_RELEASE:=1
 
 # 编译 .po -> .lmo 需要 luci-base 的 host 工具 po2lmo
@@ -24,7 +24,6 @@ define Package/luci-app-homebox
   SUBMENU:=3. Applications
   TITLE:=LuCI support for HomeBox (with bundled binary)
   DEPENDS:=+luci-base +rpcd
-  PKGARCH:=$(if $(HOMEBOX_BIN),$(ARCH),all)
 endef
 
 define Package/luci-app-homebox/description
