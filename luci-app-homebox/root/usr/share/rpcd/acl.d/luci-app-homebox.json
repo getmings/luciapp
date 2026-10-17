@@ -1,0 +1,25 @@
+{
+	"luci-app-homebox": {
+		"description": "Grant access to HomeBox",
+		"read": {
+			"uci": [
+				"homebox"
+			],
+			"ubus": {
+				"service": [
+					"list"
+				]
+			}
+		},
+		"write": {
+			"uci": [
+				"homebox"
+			],
+			"ubus": {
+				"rc": [
+					"init"
+				]
+			}
+		}
+	}
+}
