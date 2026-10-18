@@ -1,0 +1,28 @@
+{
+	"luci-app-timecontrol": {
+		"description": "Grant UCI and file access for luci-app-timecontrol",
+		"read": {
+			"file": {
+				"/var/log/timecontrol.log": [ "read" ],
+				"/var/lib/timecontrol/*": [ "read" ],
+				"/tmp/timecontrol_status.txt": [ "read" ],
+				"/bin/ps": [ "exec" ],
+				"/bin/busybox": [ "exec" ],
+				"/usr/libexec/timecontrol-call": [ "exec" ],
+				"/etc/init.d/timecontrol": [ "exec" ],
+				"/usr/bin/timecontrol": [ "exec" ]
+			},
+			"ubus": {
+				"service": [ "list" ]
+			},
+			"uci": [ "timecontrol" ]
+		},
+		"write": {
+			"file": {
+				"/var/log/timecontrol.log": [ "write" ],
+				"/usr/libexec/timecontrol-call": [ "exec" ]
+			},
+			"uci": [ "timecontrol" ]
+		}
+	}
+}
