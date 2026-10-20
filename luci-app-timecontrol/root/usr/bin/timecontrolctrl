@@ -28,6 +28,10 @@ CONNECTION_LOG="$DURATION_DIR/connections.log"
 IDLIST="/var/$NAME.idlist"
 STATUS_DB="$DURATION_DIR/status.db"
 
+# 供网页显示的设备实时状态文件（第一行为时间戳，其后每行: 目标\t备注\t状态\t原因）
+WEB_STATUS="/var/run/$NAME.status"
+STATUS_REASON=""
+
 # 初始化目录
 init_dirs() {
     mkdir -p "$DURATION_DIR"
@@ -90,17 +94,32 @@ get_enabled_devices() {
 }
 
 # 时间检查函数
-is_time_in_range() {
-    local start_time=$1
-    local end_time=$2
-    local current_time=$(date +%H:%M)
+# 把 H:MM / HH:MM 转成当天的分钟数（兼容 6:00 这种没补零的写法）
+time_to_minutes() {
+    local t="$1" h m
+    h=${t%%:*}
+    m=${t#*:}
+    [ "$h" = "$t" ] && m=0
+    while [ "${h#0}" != "$h" ]; do h=${h#0}; done
+    while [ "${m#0}" != "$m" ]; do m=${m#0}; done
+    echo $(( ${h:-0} * 60 + ${m:-0} ))
+}
 
-    if [ "$start_time" = "$end_time" ]; then
+# 当前时间是否在 [开始, 结束] 内（含边界），支持跨天，如 22:00-06:00
+is_time_in_range() {
+    local start_min end_min now_min
+    start_min=$(time_to_minutes "$1")
+    end_min=$(time_to_minutes "$2")
+    now_min=$(time_to_minutes "$(date +%H:%M)")
+
+    if [ "$start_min" -eq "$end_min" ]; then
+        # 开始和结束相同，视为全天允许
         return 0
-    elif [ "$start_time" \< "$end_time" ]; then
-        [ "$current_time" \> "$start_time" ] && [ "$current_time" \< "$end_time" ] && return 0
+    elif [ "$start_min" -lt "$end_min" ]; then
+        [ "$now_min" -ge "$start_min" ] && [ "$now_min" -le "$end_min" ] && return 0
     else
-        [ "$current_time" \> "$start_time" ] || [ "$current_time" \< "$end_time" ] && return 0
+        # 跨天时间段
+        { [ "$now_min" -ge "$start_min" ] || [ "$now_min" -le "$end_min" ]; } && return 0
     fi
     return 1
 }
@@ -221,6 +240,7 @@ check_device_control() {
     
     # 检查星期
     is_weekday_in_range "$weekdays" || {
+        STATUS_REASON="今天不在允许的星期内"
         dbg "星期不允许: $target"
         return 1
     }
@@ -230,9 +250,11 @@ check_device_control() {
             local start_time=$(config_t_get device timestart "$id" "00:00")
             local end_time=$(config_t_get device timeend "$id" "00:00")
             is_time_in_range "$start_time" "$end_time" || {
+                STATUS_REASON="不在允许时间段内 ($start_time-$end_time)"
                 dbg "时间段外: $target ($start_time-$end_time)"
                 return 1
             }
+            STATUS_REASON="在允许时间段内 ($start_time-$end_time)"
             dbg "时间段内: $target"
             return 0
             ;;
@@ -260,9 +282,11 @@ check_device_control() {
             dbg "时长检查: $target 已用=${used_minutes}分钟, 限制=${max_minutes}分钟"
             
             if [ "$used_minutes" -ge "$max_minutes" ]; then
+                STATUS_REASON="时长已用完 (${used_minutes}/${max_minutes} 分钟)"
                 dbg "已超时: $target"
                 return 1
             fi
+            STATUS_REASON="已用 ${used_minutes}/${max_minutes} 分钟"
             dbg "未超时: $target"
             return 0
             ;;
@@ -274,6 +298,7 @@ check_device_control() {
             
             # 时间段检查
             is_time_in_range "$start_time" "$end_time" || {
+                STATUS_REASON="不在允许时间段内 ($start_time-$end_time)"
                 dbg "时间段外: $target"
                 return 1
             }
@@ -297,11 +322,17 @@ check_device_control() {
                 local max_minutes=$duration
                 
                 if [ "$used_minutes" -ge "$max_minutes" ]; then
+                    STATUS_REASON="时长已用完 (${used_minutes}/${max_minutes} 分钟)"
                     dbg "时间段内但已超时: $target"
                     return 1
                 fi
             fi
             
+            if [ "$use_duration" = "1" ]; then
+                STATUS_REASON="在允许时间段内 (已用 ${used_minutes}/${max_minutes} 分钟)"
+            else
+                STATUS_REASON="在允许时间段内 ($start_time-$end_time)"
+            fi
             dbg "时间段内允许: $target"
             return 0
             ;;
@@ -310,8 +341,12 @@ check_device_control() {
             # 默认时间段控制
             local start_time=$(config_t_get device timestart "$id" "00:00")
             local end_time=$(config_t_get device timeend "$id" "00:00")
-            is_time_in_range "$start_time" "$end_time"
-            return $?
+            if is_time_in_range "$start_time" "$end_time"; then
+                STATUS_REASON="在允许时间段内 ($start_time-$end_time)"
+                return 0
+            fi
+            STATUS_REASON="不在允许时间段内 ($start_time-$end_time)"
+            return 1
             ;;
     esac
 }
@@ -354,6 +389,19 @@ update_device_status() {
     fi
 }
 
+# 记录单个设备的实时状态（以 IDLIST 中是否被阻止为准）
+write_device_status() {
+    local id="$1" target comment state
+    target=$(config_t_get device mac "$id")
+    comment=$(config_t_get device comment "$id" "设备$id" | tr '\t\r\n' '   ')
+    if [ -f "$IDLIST" ] && grep -q "!${id}!" "$IDLIST" 2>/dev/null; then
+        state="blocked"
+    else
+        state="allowed"
+    fi
+    printf '%s\t%s\t%s\t%s\n' "$target" "$comment" "$state" "$STATUS_REASON" >> "$WEB_STATUS.tmp"
+}
+
 # 主处理循环
 main_loop() {
     info "时间控制守护进程启动"
@@ -365,14 +413,18 @@ main_loop() {
         rotate_log
         dbg "开始检查设备"
         enabled_cnt=$(uci show $NAME 2>/dev/null | grep -E "\.enable='1'" | grep -c "device")
-        [ "${enabled_cnt:-0}" -eq 0 ] && timecontrol stop && break
+        [ "${enabled_cnt:-0}" -eq 0 ] && rm -f "$WEB_STATUS" "$WEB_STATUS.tmp" && timecontrol stop && break
+        date +%s > "$WEB_STATUS.tmp"
         for id in $(get_enabled_devices); do
+            STATUS_REASON=""
             if check_device_control "$id"; then
                 update_device_status "$id" 0  # 允许
             else
                 update_device_status "$id" 1  # 阻止
             fi
+            write_device_status "$id"
         done
+        mv -f "$WEB_STATUS.tmp" "$WEB_STATUS" 2>/dev/null
         
         sleep 60
     done

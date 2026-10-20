@@ -211,3 +211,183 @@ msgstr "全部（调试）"
 
 msgid "Silent: no logs. Info: only key events (default, less log). All: include debug messages. The log is cleared automatically every 3 days."
 msgstr "静默：不记录日志。信息：仅记录关键事件（默认，日志少）。全部：包含调试信息。日志每 3 天自动清理一次。"
+
+msgid "Enabled Devices Status"
+msgstr "已启用设备状态"
+
+msgid "Shows whether each enabled device is currently allowed to access the internet. Refreshes automatically."
+msgstr "显示每台已启用设备当前是否允许上网，自动刷新。"
+
+msgid "Internet Access"
+msgstr "上网状态"
+
+msgid "Reason"
+msgstr "原因"
+
+msgid "Allowed"
+msgstr "允许上网"
+
+msgid "Blocked"
+msgstr "禁止上网"
+
+msgid "Waiting for check"
+msgstr "等待检查"
+
+msgid "Service not running"
+msgstr "服务未运行"
+
+msgid "No enabled devices."
+msgstr "没有已启用的设备。"
+
+msgid "Time format must be HH:MM (00:00 - 23:59)"
+msgstr "时间格式必须为 HH:MM（00:00 - 23:59）"
+
+msgid "Limit the internet access time of devices by MAC or IP, IP ranges such as 192.168.10.20-192.168.10.30 are supported."
+msgstr "按 MAC 或 IP 限制设备的上网时间，支持 IP 段，例如 192.168.10.20-192.168.10.30。"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "Global behaviour of the time control service."
+msgstr "时间控制服务的全局行为。"
+
+msgid "Block the networking of the listed addresses."
+msgstr "阻断列表中目标地址的上网。"
+
+msgid "Only allow the listed addresses, block everything else."
+msgstr "仅允许列表中的地址上网，阻断其他所有地址。"
+
+msgid "Only internet access is controlled, the device can still reach the router."
+msgstr "只管控上网流量，设备仍可访问路由器本身。"
+
+msgid "Controlled devices can no longer reach the router itself either."
+msgstr "被控设备也将无法访问路由器本身。"
+
+msgid "Do not write any log entries."
+msgstr "不记录任何日志。"
+
+msgid "Only key events, recommended for daily use."
+msgstr "仅记录关键事件，日常使用推荐。"
+
+msgid "Include debug messages, log grows fast."
+msgstr "包含调试信息，日志增长很快。"
+
+msgid "The log is cleared automatically every 3 days."
+msgstr "日志每 3 天自动清理一次。"
+
+msgid "Add Device Rule"
+msgstr "添加设备规则"
+
+msgid "Rule Summary"
+msgstr "规则摘要"
+
+msgid "Time Period Control"
+msgstr "时间段控制"
+
+msgid "Allow internet access only inside the configured time period."
+msgstr "仅在设定的时间段内允许上网，其余时间禁止。"
+
+msgid "Allow Duration Control"
+msgstr "上机时长控制"
+
+msgid "Allow internet access for the given amount of minutes after the device goes online."
+msgstr "设备上线后允许上网指定分钟数，超时后禁止上网。"
+
+msgid "Combined Control"
+msgstr "组合控制"
+
+msgid "Allow access inside the time period and additionally limit the duration within it."
+msgstr "在时间段内允许上网，并在时间段内再限制上网时长。"
+
+msgid "Start of the time period in which internet access is allowed."
+msgstr "允许上网时间段的起始时间。"
+
+msgid "End of the time period in which internet access is allowed."
+msgstr "允许上网时间段的结束时间。"
+
+msgid "Minutes of internet access after the device goes online, access is blocked afterwards."
+msgstr "设备上线后允许上网的分钟数，超过后禁止上网。"
+
+msgid "How often the used duration counter is reset."
+msgstr "已用时长计数的重置周期。"
+
+msgid "Daily"
+msgstr "每天"
+
+msgid "Weekly"
+msgstr "每周"
+
+msgid "Monthly"
+msgstr "每月"
+
+msgid "Never"
+msgstr "不重置"
+
+msgid "Reset the counter every day."
+msgstr "每天重置一次计数。"
+
+msgid "Reset the counter every week."
+msgstr "每周重置一次计数。"
+
+msgid "Reset the counter every month."
+msgstr "每月重置一次计数。"
+
+msgid "Never reset automatically, reset manually instead."
+msgstr "不自动重置，需要手动重置。"
+
+msgid "Also limit the total online duration inside the allowed time period."
+msgstr "在允许的时间段内，同时限制上网总时长。"
+
+msgid "Days on which the rule applies, e.g. 1,2,3,4,5 for workdays."
+msgstr "规则生效的星期，例如 1,2,3,4,5 表示工作日。"
+
+msgid "Mon"
+msgstr "周一"
+
+msgid "Tue"
+msgstr "周二"
+
+msgid "Wed"
+msgstr "周三"
+
+msgid "Thu"
+msgstr "周四"
+
+msgid "Fri"
+msgstr "周五"
+
+msgid "Sat"
+msgstr "周六"
+
+msgid "Sun"
+msgstr "周日"
+
+msgid "A single IP, a MAC address or an IP range like 192.168.10.20-192.168.10.30 may be entered manually."
+msgstr "可手动填写单个 IP、MAC 地址或 IP 段，如 192.168.10.20-192.168.10.30。"
+
+msgid "Time period control: internet access is only allowed inside the configured period."
+msgstr "时间段控制：只在设定的时间段内允许上网。"
+
+msgid "Duration control: internet access is allowed for a limited number of minutes."
+msgstr "时长控制：允许上网指定分钟数，超时断网。"
+
+msgid "Combined control: limit the duration inside the allowed time period."
+msgstr "组合控制：在允许的时间段内再限制上网时长。"
+
+msgid "reset daily"
+msgstr "每天重置"
+
+msgid "reset weekly"
+msgstr "每周重置"
+
+msgid "reset monthly"
+msgstr "每月重置"
+
+msgid "never reset"
+msgstr "不重置"
+
+msgid "%s, up to %s minutes, %s"
+msgstr "%s，最多 %s 分钟，%s"
+
+msgid "%s %s-%s, up to %s minutes"
+msgstr "%s %s-%s，最多 %s 分钟"
