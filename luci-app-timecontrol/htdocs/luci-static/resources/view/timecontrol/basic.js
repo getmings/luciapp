@@ -5,6 +5,7 @@
  */
 'use strict';
 'require view';
+'require dom';
 'require fs';
 'require ui';
 'require uci';
@@ -18,40 +19,110 @@
  * ================================================================== */
 var TC_STYLE_ID = 'timecontrol-view-style';
 
-var TC_CSS = [
-	/* 下拉项：收起只显示简短标题，展开后才显示完整说明 */
-	'.cbi-dropdown > ul > li .tc-note { display: none; }',
-	'.cbi-dropdown[open] > ul.dropdown > li .tc-note {',
-	'	display: block; margin-top: .2em; font-weight: normal;',
-	'	font-size: .92em; line-height: 1.35; opacity: .72; white-space: normal;',
-	'}',
-	'.cbi-dropdown[open] > ul.dropdown > li .tc-brief { font-weight: bold; }',
+var TC_CSS = `
+:root{
+	--tc-accent:#2f6fed; --tc-ok:#16a34a; --tc-bad:#dc2626; --tc-warn:#d97706;
+	--tc-line:rgba(127,127,127,.28); --tc-soft:rgba(127,127,127,.06); --tc-muted:rgba(127,127,127,.95);
+}
 
-	/* 设备规则表：控件限宽，避免功能区被撑爆 */
-	'#cbi-timecontrol-device .cbi-dropdown:not(.btn):not(.cbi-button),',
-	'#cbi-timecontrol-device select.cbi-input-select {',
-	'	min-width: 6rem; max-width: 13rem; width: auto;',
-	'}',
-	'#cbi-timecontrol-device .td[data-name="comment"] input[type="text"] { max-width: 9rem; }',
-	'#cbi-timecontrol-device .td[data-name="mac"] .cbi-dropdown { width: 12.5rem; }',
-	'#cbi-timecontrol-device .td[data-name="time_mode"] .cbi-dropdown { width: 8.5rem; }',
-	'#cbi-timecontrol-device .td[data-name="_rule"] { line-height: 1.45; }',
-	'#cbi-timecontrol-device .td { padding-left: 6px; padding-right: 6px; }',
+/* ---------- 卡片：顶部概览 / 设备状态 / 全局设置 / 设备规则 ---------- */
+#status_bar, #tc-device-status, #cbi-timecontrol-timecontrol, #cbi-timecontrol-device{
+	border:1px solid var(--tc-line); border-radius:14px; padding:18px 22px; margin:0 0 18px;
+	background:var(--tc-soft); box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+#tc-device-status > h3, #cbi-timecontrol-timecontrol > h3, #cbi-timecontrol-device > h3{
+	position:relative; margin:0 0 6px; padding:0 0 0 12px; border:0; font-size:16px; font-weight:600; line-height:1.4;
+}
+#tc-device-status > h3::before, #cbi-timecontrol-timecontrol > h3::before, #cbi-timecontrol-device > h3::before{
+	content:""; position:absolute; left:0; top:3px; bottom:3px; width:4px; border-radius:4px; background:var(--tc-accent);
+}
+#tc-device-status > .cbi-section-descr, #cbi-timecontrol-timecontrol > .cbi-section-descr, #cbi-timecontrol-device > .cbi-section-descr{
+	margin:0 0 14px 12px; padding:0; font-size:13px; line-height:1.75; color:var(--tc-muted);
+}
 
-	/* 状态指示 */
-	'.tc-state { display: inline-flex; align-items: center; gap: .45em; }',
-	'.tc-dot { display: inline-block; width: .6em; height: .6em; border-radius: 50%; flex: none; }',
-	'.tc-dot-on { background: #4caf50; box-shadow: 0 0 0 3px rgba(76,175,80,.18); }',
-	'.tc-dot-off { background: #e0554e; box-shadow: 0 0 0 3px rgba(224,85,78,.18); }',
-	'.tc-badge {',
-	'	display: inline-block; padding: .1em .6em; border-radius: 1em;',
-	'	font-size: .92em; font-weight: bold; color: #fff; white-space: nowrap;',
-	'}',
-	'.tc-badge-on { background: #4caf50; }',
-	'.tc-badge-off { background: #e0554e; }',
-	'.tc-badge-idle { background: #9e9e9e; }',
-	'.tc-pid { opacity: .6; }'
-].join('\n');
+/* ---------- 顶部概览 ---------- */
+.tc-hero-head{ display:flex; flex-wrap:wrap; gap:10px 20px; align-items:center; justify-content:space-between; }
+.tc-hero-links{ display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; color:var(--tc-muted); }
+.tc-hero-links a{ text-decoration:none; }
+.tc-lead{ margin:12px 0 0; font-size:13.5px; line-height:1.7; color:var(--tc-muted); }
+
+/* ---------- 状态胶囊 ---------- */
+.tc-pill{ display:inline-flex; align-items:center; gap:7px; padding:3px 12px 3px 10px; border-radius:999px;
+	font-size:13px; font-weight:600; line-height:22px; border:1px solid transparent; white-space:nowrap; }
+.tc-pill i{ width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
+.tc-pill-ok{ color:var(--tc-ok); background:rgba(22,163,74,.12); border-color:rgba(22,163,74,.3); }
+.tc-pill-bad{ color:var(--tc-bad); background:rgba(220,38,38,.10); border-color:rgba(220,38,38,.28); }
+.tc-pill-wait{ color:var(--tc-muted); background:rgba(127,127,127,.12); border-color:var(--tc-line); }
+.tc-pill-warn{ color:var(--tc-warn); background:rgba(217,119,6,.12); border-color:rgba(217,119,6,.3); }
+.tc-pid{ margin-left:8px; font-size:12px; color:var(--tc-muted); }
+
+/* ---------- 设备状态表 ---------- */
+.tc-table{ width:100%; border-collapse:separate; border-spacing:0; }
+.tc-table th{ text-align:left; font-size:12px; font-weight:600; color:var(--tc-muted); padding:8px 12px; border-bottom:1px solid var(--tc-line); }
+.tc-table td{ padding:10px 12px; border-bottom:1px solid var(--tc-line); vertical-align:middle; line-height:1.6; word-break:break-word; }
+.tc-table tr:last-child td{ border-bottom:0; }
+.tc-table tbody tr:hover td{ background:rgba(127,127,127,.06); }
+.tc-empty{ text-align:center; color:var(--tc-muted); padding:22px 12px !important; }
+.tc-mono{ font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12.5px; }
+
+/* ---------- 通用：说明文字、按钮、开关 ---------- */
+#cbi-timecontrol-timecontrol .cbi-value-description,
+#cbi-timecontrol-device .cbi-value-description,
+.modal.cbi-modal .cbi-value-description{ margin-top:6px; font-size:12px; line-height:1.55; color:var(--tc-muted); }
+#cbi-timecontrol-timecontrol .cbi-button, #cbi-timecontrol-device .cbi-button, .modal.cbi-modal .cbi-button{ border-radius:8px; }
+#cbi-timecontrol-device input[type="checkbox"], .modal.cbi-modal input[type="checkbox"]{
+	width:18px; height:18px; accent-color:var(--tc-accent); cursor:pointer; vertical-align:middle;
+}
+
+/* ---------- 全局设置：保持主题原有的“左标题右控件”布局，只统一间距 ---------- */
+#cbi-timecontrol-timecontrol .cbi-section-node{ margin:0; padding:0; border:0; background:none; }
+#cbi-timecontrol-timecontrol .cbi-value{ padding:12px 0; margin:0; border-bottom:1px dashed var(--tc-line); }
+#cbi-timecontrol-timecontrol .cbi-value:last-child{ border-bottom:0; }
+#cbi-timecontrol-timecontrol .cbi-value-title{ font-weight:600; }
+#cbi-timecontrol-timecontrol .cbi-dropdown{ min-width:12rem; max-width:20rem; }
+
+/* ---------- 下拉项：收起只显示简短标题，展开后才显示完整说明 ---------- */
+.cbi-dropdown > ul > li .tc-note{ display:none; }
+.cbi-dropdown[open] > ul.dropdown > li .tc-note{
+	display:block; margin-top:.2em; font-weight:normal; font-size:.92em; line-height:1.4; opacity:.72; white-space:normal;
+}
+.cbi-dropdown[open] > ul.dropdown > li .tc-brief{ font-weight:600; }
+
+/* ---------- 设备规则表：控件限宽，避免功能区被撑爆 ---------- */
+#cbi-timecontrol-device .cbi-section-node{ margin:0; padding:0; border:0; background:none; }
+#cbi-timecontrol-device .cbi-section-create{ margin:0 0 12px; padding:0; }
+#cbi-timecontrol-device .th{ font-size:12px; font-weight:600; color:var(--tc-muted); white-space:nowrap; }
+#cbi-timecontrol-device .td{ padding:10px 6px; line-height:1.55; vertical-align:middle; }
+#cbi-timecontrol-device tr.cbi-section-table-row{ transition:background .15s; }
+#cbi-timecontrol-device tr.cbi-section-table-row:hover{ background:rgba(127,127,127,.06); }
+#cbi-timecontrol-device tr.cbi-section-table-row.tc-row-off .td:not([data-name="enable"]):not(.cbi-section-actions){ opacity:.5; }
+
+#cbi-timecontrol-device .cbi-dropdown:not(.btn):not(.cbi-button),
+#cbi-timecontrol-device select.cbi-input-select{ min-width:6rem; max-width:13rem; width:auto; }
+#cbi-timecontrol-device .td[data-name="comment"] input[type="text"]{ max-width:9rem; }
+#cbi-timecontrol-device .td[data-name="mac"] .cbi-dropdown{ width:12.5rem; }
+#cbi-timecontrol-device .td[data-name="time_mode"] .cbi-dropdown{ width:8.5rem; }
+#cbi-timecontrol-device .cbi-dropdown[open] > ul.dropdown{ min-width:15rem; }
+
+/* 规则摘要：小标签，自动换行 */
+#cbi-timecontrol-device .td[data-name="_rule"]{ line-height:1.45; }
+.tc-summary{ display:flex; flex-wrap:wrap; gap:5px; }
+.tc-seg{ display:inline-block; padding:0 10px; border-radius:8px; font-size:12.5px; line-height:22px; background:rgba(127,127,127,.12); }
+.tc-seg-days{ background:rgba(47,111,237,.14); color:var(--tc-accent); font-weight:600; }
+.tc-seg-time{ background:rgba(22,163,74,.13); color:var(--tc-ok); }
+.tc-seg-dur{ background:rgba(217,119,6,.14); color:var(--tc-warn); }
+
+/* ---------- 编辑弹窗：统一间距 / 标题 / 说明 ---------- */
+.modal.cbi-modal{ border-radius:16px; }
+.modal.cbi-modal > h4{ margin:0 0 8px; padding:0 0 12px; font-size:18px; font-weight:600; border-bottom:1px solid var(--tc-line); }
+.modal.cbi-modal .cbi-value{ padding:12px 0; margin:0; border-bottom:1px dashed var(--tc-line); }
+.modal.cbi-modal .cbi-value-title{ font-weight:600; }
+.modal.cbi-modal .cbi-dropdown[open] > ul.dropdown{ min-width:15rem; }
+
+@media (max-width:640px){
+	#status_bar, #tc-device-status, #cbi-timecontrol-timecontrol, #cbi-timecontrol-device{ padding:14px; }
+}
+`;
 
 function injectStyle() {
 	if (document.getElementById(TC_STYLE_ID))
@@ -114,6 +185,10 @@ function readDeviceStatus() {
 	});
 }
 
+function pill(cls, text) {
+	return E('span', { 'class': 'tc-pill ' + cls }, [ E('i'), text ]);
+}
+
 function renderDeviceStatus(table, st, running) {
 	var devs = uci.sections('timecontrol', 'device').filter(function(d) {
 		return d.enable === '1';
@@ -121,62 +196,55 @@ function renderDeviceStatus(table, st, running) {
 	var now = Math.floor(Date.now() / 1000);
 	var stale = !running || !st || (now - st.ts) > 180;
 
-	var rows = [
-		E('tr', { 'class': 'tr table-titles' }, [
-			E('th', { 'class': 'th' }, _('Comment')),
-			E('th', { 'class': 'th' }, _('IP/MAC Address')),
-			E('th', { 'class': 'th' }, _('Internet Access')),
-			E('th', { 'class': 'th' }, _('Reason'))
-		])
-	];
+	var body = [];
 
-	if (!devs.length) {
-		rows.push(E('tr', { 'class': 'tr placeholder' },
-			E('td', { 'class': 'td', 'colspan': 4 }, E('em', _('No enabled devices.')))));
-	}
+	if (!devs.length)
+		body.push(E('tr', {}, E('td', { 'class': 'tc-empty', 'colspan': 4 }, _('No enabled devices.'))));
 
 	devs.forEach(function(d) {
 		var info = (!stale && st.devices[d.mac]) ? st.devices[d.mac] : null;
-		var stateEl, reason;
+		var stateEl, reason = '';
 
 		if (!info) {
-			stateEl = E('span', { 'class': 'tc-badge tc-badge-idle' },
-				running ? _('Waiting for check') : _('Service not running'));
-			reason = '';
+			stateEl = pill('tc-pill-wait', running ? _('Waiting for check') : _('Service not running'));
 		}
 		else if (info.state === 'allowed') {
-			stateEl = E('span', { 'class': 'tc-badge tc-badge-on' }, _('Allowed'));
+			stateEl = pill('tc-pill-ok', _('Allowed'));
 			reason = info.reason;
 		}
 		else {
-			stateEl = E('span', { 'class': 'tc-badge tc-badge-off' }, _('Blocked'));
+			stateEl = pill('tc-pill-bad', _('Blocked'));
 			reason = info.reason;
 		}
 
-		rows.push(E('tr', { 'class': 'tr' }, [
-			E('td', { 'class': 'td' }, d.comment || '-'),
-			E('td', { 'class': 'td' }, d.mac || '-'),
-			E('td', { 'class': 'td' }, stateEl),
-			E('td', { 'class': 'td' }, reason)
+		body.push(E('tr', {}, [
+			E('td', {}, d.comment || '-'),
+			E('td', { 'class': 'tc-mono' }, d.mac || '-'),
+			E('td', {}, stateEl),
+			E('td', {}, reason)
 		]));
 	});
 
-	while (table.firstChild)
-		table.removeChild(table.firstChild);
-	rows.forEach(function(r) { table.appendChild(r); });
+	dom.content(table, [
+		E('thead', {}, E('tr', {}, [
+			E('th', { 'style': 'width:20%' }, _('Comment')),
+			E('th', { 'style': 'width:24%' }, _('IP/MAC Address')),
+			E('th', { 'style': 'width:18%' }, _('Internet Access')),
+			E('th', {}, _('Reason'))
+		])),
+		E('tbody', {}, body)
+	]);
 }
 
-function serviceStatusNode(isRunning, pid) {
-	var nodes = [
-		E('span', { 'class': 'tc-dot ' + (isRunning ? 'tc-dot-on' : 'tc-dot-off') }),
-		E('strong', _('TimeControl Service')),
-		E('em', isRunning ? _('RUNNING') : _('NOT RUNNING'))
-	];
+function serviceStatusNodes(isRunning, pid) {
+	var nodes = [ isRunning
+		? pill('tc-pill-ok', _('TimeControl Service') + ' ' + _('RUNNING'))
+		: pill('tc-pill-bad', _('TimeControl Service') + ' ' + _('NOT RUNNING')) ];
 
 	if (isRunning && pid)
-		nodes.push(E('small', { 'class': 'tc-pid' }, 'PID ' + pid));
+		nodes.push(E('span', { 'class': 'tc-pid' }, 'PID ' + pid));
 
-	return E('span', { 'class': 'tc-state' }, nodes);
+	return nodes;
 }
 
 /* ================================================================== *
@@ -252,8 +320,8 @@ function cycleText(val) {
 	return TC_CYCLE_SUMMARY[String(val || 'daily')] || String(val || 'daily');
 }
 
-/* 一行人话说明当前规则，显示在规则列表里，免去逐列堆字段 */
-function ruleSummary(section_id, mode) {
+/* 把当前规则拆成几个片段：星期 / 时间段 / 时长 / 重置周期 */
+function ruleParts(section_id, mode) {
 	mode = mode || uci.get('timecontrol', section_id, 'time_mode') || 'period';
 
 	var week = weekText(uci.get('timecontrol', section_id, 'week'));
@@ -263,23 +331,51 @@ function ruleSummary(section_id, mode) {
 	var cycle = cycleText(uci.get('timecontrol', section_id, 'reset_cycle'));
 	var useDuration = uci.get('timecontrol', section_id, 'use_duration');
 
+	var days = { cls: 'tc-seg-days', text: week };
+	var time = { cls: 'tc-seg-time', text: (start === end) ? _('All day') : '%s-%s'.format(start, end) };
+	var dur  = { cls: 'tc-seg-dur',  text: _('up to %s minutes').format(duration) };
+	var cyc  = { cls: '',            text: cycle };
+
 	if (mode === 'duration')
-		return _('%s, up to %s minutes, %s').format(week, duration, cycle);
+		return [ days, dur, cyc ];
 
 	if (mode === 'combined' && useDuration === '1')
-		return _('%s %s-%s, up to %s minutes').format(week, start, end, duration);
+		return [ days, time, dur, cyc ];
 
-	return '%s %s-%s'.format(week, start, end);
+	return [ days, time ];
 }
 
-/* 列表里改了控制方式，摘要跟着变，省得再点一次「编辑」才看到 */
+/* 纯文本版本（标签渲染失败时的兜底，例如：每天, 最长 60 分钟, 每日重置） */
+function ruleSummary(section_id, mode) {
+	return ruleParts(section_id, mode).map(function(p) { return p.text; }).join(_(', '));
+}
+
+function paintSummary(cell, parts) {
+	cell.textContent = '';
+	cell.appendChild(E('div', { 'class': 'tc-summary' }, parts.map(function(p) {
+		return E('span', { 'class': ('tc-seg ' + p.cls).trim() }, p.text);
+	})));
+}
+
+/* 列表里改了控制方式 / 启用开关，摘要和行状态跟着变，省得再点一次「编辑」才看到 */
 function bindRuleSummary(mapNode) {
 	var rows = mapNode.querySelectorAll('#cbi-timecontrol-device tr.cbi-section-table-row');
 
 	Array.prototype.forEach.call(rows, function(row) {
-		var modeCell = row.querySelector('.td[data-name="time_mode"]'),
+		var sid = row.getAttribute('data-sid'),
+		    modeCell = row.querySelector('.td[data-name="time_mode"]'),
 		    ruleCell = row.querySelector('.td[data-name="_rule"]'),
-		    widget = modeCell ? modeCell.querySelector('.cbi-dropdown') : null;
+		    widget = modeCell ? modeCell.querySelector('.cbi-dropdown') : null,
+		    enable = row.querySelector('.td[data-name="enable"] input[type="checkbox"]');
+
+		if (ruleCell)
+			paintSummary(ruleCell, ruleParts(sid));
+
+		if (enable) {
+			var mark = function() { row.classList.toggle('tc-row-off', !enable.checked); };
+			enable.addEventListener('change', mark);
+			mark();
+		}
 
 		if (!widget || !ruleCell)
 			return;
@@ -288,7 +384,7 @@ function bindRuleSummary(mapNode) {
 			var sel = widget.querySelector('li[selected]');
 
 			if (sel)
-				ruleCell.textContent = ruleSummary(row.getAttribute('data-sid'), sel.getAttribute('data-value'));
+				paintSummary(ruleCell, ruleParts(sid, sel.getAttribute('data-value')));
 		});
 	});
 }
@@ -310,28 +406,22 @@ return view.extend({
 
 		injectStyle();
 
-		m = new form.Map('timecontrol', _('Internet Time Control'),
-			_('Limit the internet access time of devices by MAC or IP, IP ranges such as 192.168.10.20-192.168.10.30 are supported.') + '<br/>' +
-			_('Suggested feedback:') + ' <a href="https://github.com/sirpdboy/luci-app-timecontrol.git" target="_blank">GitHub @timecontrol</a>');
+		m = new form.Map('timecontrol', _('Internet Time Control'));
 
-		/* ---------- 运行状态 ---------- */
+		/* ---------- 运行状态 + 简介 ---------- */
 		s = m.section(form.TypedSection);
 		s.anonymous = true;
 		s.render = function() {
-			var statusView = E('p', { 'id': 'service_status' }, [
-				E('span', { 'class': 'spinning' }, ' '), _('Checking service status...')
-			]);
+			var statusView = E('div', { 'id': 'service_status' },
+				pill('tc-pill-wait', _('Checking service status...')));
 
 			var refresh = function() {
 				return checkTimeControlProcess()
 					.then(function(res) {
-						statusView.textContent = '';
-						statusView.appendChild(serviceStatusNode(res.running, res.pid));
+						dom.content(statusView, serviceStatusNodes(res.running, res.pid));
 					})
 					.catch(function(err) {
-						statusView.textContent = '';
-						statusView.appendChild(E('span', { 'style': 'color:orange' },
-							'⚠ ' + _('Status check failed')));
+						dom.content(statusView, pill('tc-pill-warn', _('Status check failed')));
 						console.error('Status check error:', err);
 					});
 			};
@@ -341,17 +431,19 @@ return view.extend({
 			poll.start();
 
 			return E('div', { 'class': 'cbi-section', 'id': 'status_bar' }, [
-				statusView,
-				E('div', { 'style': 'text-align: right; font-style: italic;' }, [
-					E('span', {}, [
-						_('© github '),
-						E('a', {
-							'href': 'https://github.com/sirpdboy',
-							'target': '_blank',
-							'style': 'text-decoration: none;'
-						}, 'by sirpdboy')
+				E('div', { 'class': 'tc-hero-head' }, [
+					statusView,
+					E('div', { 'class': 'tc-hero-links' }, [
+						E('span', {}, _('Suggested feedback:')),
+						E('a', { 'href': 'https://github.com/sirpdboy/luci-app-timecontrol.git', 'target': '_blank', 'rel': 'noreferrer' }, 'GitHub @timecontrol'),
+						E('span', {}, [
+							_('© github '),
+							E('a', { 'href': 'https://github.com/sirpdboy', 'target': '_blank', 'rel': 'noreferrer' }, 'by sirpdboy')
+						])
 					])
-				])
+				]),
+				E('p', { 'class': 'tc-lead' },
+					_('Limit internet time for each device by IP or MAC address. Rules below apply in blacklist mode.'))
 			]);
 		};
 
@@ -359,7 +451,7 @@ return view.extend({
 		s = m.section(form.TypedSection);
 		s.anonymous = true;
 		s.render = function() {
-			var table = E('table', { 'class': 'table cbi-section-table', 'id': 'device_status_table' });
+			var table = E('table', { 'class': 'tc-table', 'id': 'device_status_table' });
 			var update = function() {
 				return Promise.all([
 					readDeviceStatus(),
@@ -370,7 +462,7 @@ return view.extend({
 			update();
 			poll.add(update, 10);
 
-			return E('div', { 'class': 'cbi-section' }, [
+			return E('div', { 'class': 'cbi-section', 'id': 'tc-device-status' }, [
 				E('h3', _('Enabled Devices Status')),
 				E('div', { 'class': 'cbi-section-descr' },
 					_('Shows whether each enabled device is currently allowed to access the internet. Refreshes automatically.')),
